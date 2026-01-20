@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+
+from core.pii_ner import PiiNer, NerResult
 
 
 @dataclass(frozen=True)
@@ -41,7 +43,7 @@ def _apply(pattern: re.Pattern, label: str, text: str) -> Tuple[str, bool]:
     return text, False
 
 
-def redact_pii(text: str) -> RedactionResult:
+def redact_pii(text: str, ner: Optional[PiiNer] = None) -> RedactionResult:
     """
     Detecte et masque des informations sensibles/PII avant tout traitement.
     V1: heuristique + regex. Objectif: defense en profondeur, pas perfection.
@@ -63,8 +65,10 @@ def redact_pii(text: str) -> RedactionResult:
         if hit:
             types.append(label)
 
-    return RedactionResult(
-        redacted_text=redacted,
-        detected=len(types) > 0,
-        types=types,
-    )
+    if ner is not None:
+        ner_result: NerResult = ner.redact(redacted)
+        redacted = ner_result.redacted_text
+        if ner_result.types:
+            types.extend(ner_result.types)
+
+    return RedactionResult(redacted_text=redacted, detected=len(types) > 0, types=types)

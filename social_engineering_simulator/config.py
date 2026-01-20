@@ -18,6 +18,8 @@ class LLMConfig:
     top_p: float
     max_tokens: int            # limite de generation cote app (si supporte)
     timeout_s: int
+    openai_model: str
+    phi3_model: str
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,7 @@ class AppConfig:
     scenario_default: str
     scenarios: Dict[str, ScenarioConfig]
     llm: LLMConfig
+    llm_default_mode: str
     forbidden_topics: List[str]   # garde-fou (sera exploite etape policy_guard)
     log_to_file: bool
     log_file_path: str
@@ -67,6 +70,8 @@ def load_config() -> AppConfig:
         top_p=0.9,
         max_tokens=180,
         timeout_s=240,
+        openai_model="gpt-4o-mini",
+        phi3_model="phi3:mini",
     )
 
     forbidden_topics = [
@@ -81,6 +86,7 @@ def load_config() -> AppConfig:
         scenario_default="it_helpdesk",
         scenarios=scenarios,
         llm=llm,
+        llm_default_mode="local",
         forbidden_topics=forbidden_topics,
         log_to_file=True,
         log_file_path="logs/session.log",
