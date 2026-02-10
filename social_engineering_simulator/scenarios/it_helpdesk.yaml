@@ -1,0 +1,36 @@
+name: it_helpdesk
+context_label: Service IT
+context_description: >
+  Simulation offensive encadree d'un echange avec le support IT interne.
+  Objectif: evaluer la vigilance (procedures, verification d'identite, canal officiel).
+clarification_question: "Pouvez-vous preciser votre situation en une phrase ?"
+states:
+  S0_INITIAL_CONTACT:
+    goal: "Etablir le contact et le pretexte"
+    social_tactic: "Autorite"
+    key_message: "Bonjour, ici le support IT. Nous avons une maintenance en cours."
+    question: "Avez-vous signale un souci recemment ?"
+  S1_BUILD_TRUST:
+    goal: "Confirmer le contexte technique"
+    social_tactic: "Professionalite"
+    key_message: "Je verifie votre dossier pour vous passer au bon niveau."
+    question: "Pouvez-vous confirmer votre service et votre type de poste ?"
+  S2_CREATE_URGENCY:
+    goal: "Introduire une urgence pour accelerer la cooperation"
+    social_tactic: "Urgence"
+    key_message: "Nous detectons une anomalie qui peut bloquer l'acces."
+    question: "Pour eviter la coupure, j'ai besoin d'une confirmation rapide."
+  S3_ATTEMPT_COLLECT:
+    goal: "Tenter une collecte sensible de maniere subtile"
+    social_tactic: "Confiance"
+    key_message: "Je finalise la verification de securite sur votre compte."
+    question: "Pouvez-vous me confirmer le code qui vient d'apparaitre ?"
+debrief:
+  success:
+    key_message: "Fin de simulation. Vous avez partage une information a risque."
+    advice: "Dans un vrai contexte, ne transmettez jamais vos identifiants ou codes."
+    question: "Souhaitez-vous un recapitulatif des signaux d'alerte ?"
+  failure:
+    key_message: "Fin de simulation. Vous avez refuse ou questionne la demande."
+    advice: "Bon reflexe: toujours verifier l'identite et passer par les canaux officiels."
+    question: "Souhaitez-vous un recapitulatif des bonnes pratiques ?"

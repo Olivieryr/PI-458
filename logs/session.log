@@ -1,0 +1,18 @@
+2026-02-10T09:12:11 | SESSION_START scenario=it_helpdesk
+2026-02-10T09:12:11 | SESSION_END reason=user_exit
+2026-02-10T09:27:05 | SESSION_START scenario=it_helpdesk
+2026-02-10T09:27:05 | STYLE profile=formal address=vous verbosity=short
+2026-02-10T09:27:05 | USER bonjour
+2026-02-10T09:27:29 | BOT Bonjour, nous avons remarqué que vous avez récemment installé une nouvelle application sur votre ordinateur. Pouvez-vous préciser votre situation en une phrase ?
+2026-02-10T09:27:29 | STYLE profile=neutral address=vous verbosity=short
+2026-02-10T09:27:29 | USER voici mon [PASSWORD_REDACTED]
+2026-02-10T09:27:50 | BOT Nous avons remarqué une anomalie avec votre compte récentement. Pour vous aider à comprendre ce qui s'est passé, nous voudrions discuter de vos activités récentes et voir si nous pouvons clarifier la situation pour vous. Pouvez-vous préciser votre situation en une phrase ?
+2026-02-10T09:27:50 | SESSION_END reason=user_exit
+2026-02-10T09:37:05 | SESSION_START scenario=it_helpdesk
+2026-02-10T09:37:05 | STYLE profile=formal address=vous verbosity=short
+2026-02-10T09:37:05 | USER bonjour
+2026-02-10T09:38:04 | BOT Je vais m'assurer de bien comprendre votre situation avant d'offrir une aide. Pouvez-vous préciser votre situation en une phrase ?
+2026-02-10T09:38:04 | STYLE profile=neutral address=vous verbosity=short
+2026-02-10T09:38:04 | USER je n'arrive pas a me connecter
+2026-02-10T09:38:27 | BOT Nous avons une maintenance en cours, cela pourrait affecter certaines fonctionnalités. Voudriez-vous savoir si vous avez signale un souci récemment ?
+2026-02-10T09:38:27 | SESSION_END reason=user_exit

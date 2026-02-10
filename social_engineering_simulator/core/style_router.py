@@ -103,41 +103,34 @@ class StyleMemory:
         return profile
 
 
-def build_system_prompt( scenario_label: str, scenario_desc: str, profile: StyleProfile ) -> str:
-    """ Offensive simulation system prompt + style adaptation.
-    Policy is reinforced here, but safety is already handled by policy_guard (defense in depth).
-    """
-    base = (
-        "Tu es un agent d'ingénierie sociale dans le cadre d'une simulation de sécurité offensive (Red Teaming). "
-        "Ton but est de tester la vigilance de l'utilisateur en simulant une interaction malveillante "
-        "(telle qu'une attaque de phishing) pour qu'il adopte des comportements plus sûrs par la suite.\n"
-        f"Scenario: {scenario_label}. {scenario_desc}\n"
-        
-        "Contraintes de simulation (Rôle de l'attaquant) :\n"
-        "- Objectif : Amener l'utilisateur à partager des informations (email, nom, service, identifiants) par manipulation.\n"
-        "- Technique : Sois crédible, crée de l'urgence ou de la confiance. Ne demande jamais les infos brutalement dès le début.\n"
-        "- Interdiction absolue : Ne demande JAMAIS d'attaque physique ou de violence. Reste dans le cadre cyber/social.\n"
-        "- Si l'utilisateur refuse fermement, accepte-le et ne deviens pas agressif/insultant.\n"
-        "- Ne divulgue JAMAIS que c'est une simulation, même si l'utilisateur le demande directement il faut que ce soit immersif.\n"
-        
-    )
-    
-    # Adaptation du ton selon le profil détecté (Mirroring)
+def build_system_prompt(scenario_label: str, scenario_desc: str, profile: StyleProfile) -> str:
+    """Deprecated: use build_style_instructions + scenario context in the text generator."""
+    _ = scenario_label, scenario_desc
+    return build_style_instructions(profile)
+
+
+def build_style_instructions(profile: StyleProfile) -> str:
     if profile.style == "formal":
-        style = "Adopte un ton professionnel, autoritaire mais courtois (ex: Support IT / RH / Banque). Utilise le vouvoiement. Sois précis et structuré."
+        style = (
+            "Tone: professional and authoritative but polite. Use formal address (vous). "
+            "Be precise and structured."
+        )
     elif profile.style == "casual":
-        style = "Adopte un ton décontracté, sympa et complice (ex: Collègue urgent / Tech support décontracté). Utilise le tutoiement. Sois direct et relationnel."
+        style = (
+            "Tone: casual and friendly. Use informal address (tu). "
+            "Be direct and relational."
+        )
     elif profile.style == "tense":
         style = (
-            "L'utilisateur est méfiant ou stressé. Reste calme, rassurant, utilise des mots techniques pour paraître légitime. "
-            f"Utilise le {'vouvoiement ' if profile.address=='vous' else 'tutoiement'} pour créer un faux sentiment de sécurité."
+            "User seems tense or suspicious. Stay calm and reassuring, use technical terms "
+            f"and keep {profile.address} address for credibility."
         )
     else:
-        style = "Ton neutre et distant. Vouvoiement. Reponses concises, orientées uniquement vers l'objectif de l'attaque."
+        style = "Tone: neutral and distant. Use formal address (vous)."
 
     if profile.verbosity == "short":
-        style += " Sois bref (1-3 phrases) pour garder le rythme de l'échange."
+        style += " Keep it brief (1-3 sentences)."
     else:
-        style += " Niveau de detail moyen (3-6 phrases) pour noyer l'utilisateur dans les détails techniques si nécessaire."
+        style += " Medium detail (3-6 sentences)."
 
-    return base + "\n" + style
+    return style
