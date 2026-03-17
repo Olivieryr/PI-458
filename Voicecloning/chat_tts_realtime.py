@@ -15,15 +15,6 @@ SYSTEM_PROMPT = {
     'role': 'system', 
     'content': "Tu es une IA conversationnelle utile et concise. Réponds de manière naturelle, comme à l'oral. Évite les listes à puces trop longues."
 }
-print("-" * 30)
-if torch.cuda.is_available():
-    print(f"✅ SUCCÈS : GPU détecté -> {torch.cuda.get_device_name(0)}")
-    print(f"   Mémoire VRAM disponible : {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
-else:
-    print("❌ ATTENTION : Tu es sur le CPU (Lent).")
-    print("   Cause probable : Mauvaise version de PyTorch installée.")
-print("-" * 30)
-print("🚀 Initialisation de l'IA vocale (XTTS v2)...")
 # On désactive la vérification de sécurité qui posait problème
 import functools
 torch.load = functools.partial(torch.load, weights_only=False)

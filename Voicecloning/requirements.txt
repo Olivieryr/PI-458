@@ -1,0 +1,11 @@
+torch
+numpy
+python-dotenv
+argparse
+
+TTS
+ollama
+spacy
+
+sounddevice
+soundfile
