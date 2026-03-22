@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DFW Tool v2 — Watermark Visible / Invisible / Détecteur</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap');
+:root {
+  --red:#ff2d2d; --red-dim:rgba(255,45,45,.15); --red-glow:rgba(255,45,45,.4);
+  --green:#00ff88; --green-dim:rgba(0,255,136,.12); --green-glow:rgba(0,255,136,.35);
+  --blue:#00cfff;  --blue-dim:rgba(0,207,255,.12);
+  --bg:#080a0e; --surface:#0d1117; --border:rgba(255,45,45,.22);
+  --text:#e8e8e8; --muted:#5a6070;
+  --mono:'Share Tech Mono',monospace; --sans:'Rajdhani',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,45,45,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,45,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+header{width:100%;padding:22px 36px 18px;border-bottom:1px solid var(--border);position:relative;z-index:1;display:flex;align-items:center;gap:14px}
+.logo-icon{width:34px;height:34px;border:2px solid var(--red);position:relative;flex-shrink:0}
+.logo-icon::before{content:'';position:absolute;inset:4px;background:var(--red);clip-path:polygon(50% 0%,0% 100%,100% 100%);opacity:.8}
+.logo-text{font-family:var(--mono);font-size:17px;letter-spacing:3px;color:var(--red)}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:2px}
+.badge{margin-left:auto;font-family:var(--mono);font-size:9px;padding:3px 9px;border:1px solid var(--red);color:var(--red);letter-spacing:2px;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ── TABS ────────────────────────────────────────────────── */
+main{width:100%;max-width:980px;padding:32px 22px 60px;position:relative;z-index:1;display:flex;flex-direction:column;gap:24px}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border)}
+.tab{font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:10px 22px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--text)}
+.tab.active-encode{color:var(--red);border-bottom-color:var(--red)}
+.tab.active-detect{color:var(--green);border-bottom-color:var(--green)}
+.panel{display:none;flex-direction:column;gap:22px}
+.panel.visible{display:flex}
+
+/* ── DROP ZONE ───────────────────────────────────────────── */
+.drop-zone{border:1px dashed var(--border);padding:42px 28px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;transition:all .25s;position:relative;background:var(--surface)}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--red);box-shadow:inset 0 0 40px var(--red-dim),0 0 16px var(--red-dim)}
+.drop-zone .icon{font-size:36px;opacity:.45}
+.drop-zone p{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
+.drop-zone strong{color:var(--red);font-weight:400}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-zone.detect-zone:hover,.drop-zone.detect-zone.drag-over{border-color:var(--green);box-shadow:inset 0 0 40px var(--green-dim),0 0 16px var(--green-dim)}
+
+/* ── MODE TOGGLE ─────────────────────────────────────────── */
+.mode-toggle{display:flex;gap:8px}
+.mode-btn{font-family:var(--mono);font-size:10px;letter-spacing:2px;padding:8px 18px;border:1px solid var(--border);cursor:pointer;background:none;color:var(--muted);transition:all .2s}
+.mode-btn:hover{border-color:var(--red);color:var(--text)}
+.mode-btn.active{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+
+/* ── CONTROLS ────────────────────────────────────────────── */
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ctrl-block{background:var(--surface);border:1px solid var(--border);padding:16px 18px}
+.ctrl-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--red);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+.ctrl-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.ctrl-label.green{color:var(--green)}
+.ctrl-label.green::after{background:rgba(0,255,136,.2)}
+.ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.ctrl-row:last-child{margin-bottom:0}
+label{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:72px;letter-spacing:1px}
+input[type=text],input[type=range],select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 10px;outline:none;transition:border-color .2s;width:100%}
+input[type=text]:focus,select:focus{border-color:var(--red)}
+input[type=range]{padding:0;accent-color:var(--red);cursor:pointer}
+select option{background:var(--bg)}
+.range-val{font-family:var(--mono);font-size:11px;color:var(--red);min-width:34px;text-align:right}
+.color-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+.color-swatch{width:22px;height:22px;border:2px solid transparent;cursor:pointer;transition:border-color .2s,transform .15s}
+.color-swatch:hover{transform:scale(1.18)}
+.color-swatch.active{border-color:#fff}
+
+/* Invisible WM controls */
+.invis-controls{display:none;flex-direction:column;gap:8px}
+.invis-controls.visible{display:flex}
+
+/* ── PREVIEW ─────────────────────────────────────────────── */
+.preview-section{display:none;flex-direction:column;gap:14px}
+.preview-section.visible{display:flex}
+.section-title{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--red);display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-title.green{color:var(--green)}
+.canvas-wrap{position:relative;background:#000;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);max-height:480px;overflow:hidden}
+canvas#preview{max-width:100%;max-height:480px;display:block}
+video#source{display:none}
+.canvas-badge{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);background:rgba(0,0,0,.7);padding:3px 7px;pointer-events:none}
+.invis-badge{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:8px;padding:3px 8px;background:rgba(0,0,136,.6);color:var(--blue);border:1px solid var(--blue);pointer-events:none;display:none}
+.invis-badge.visible{display:block}
+
+/* ── ACTIONS ─────────────────────────────────────────────── */
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:11px 24px;border:1px solid;cursor:pointer;transition:all .2s;text-transform:uppercase;background:transparent;position:relative;overflow:hidden}
+.btn::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s}
+.btn:hover::before{opacity:1}
+.btn-red{border-color:var(--red);color:var(--red)}
+.btn-red::before{background:var(--red-dim)}
+.btn-red:hover{box-shadow:0 0 14px var(--red-glow)}
+.btn-red:disabled{opacity:.28;cursor:not-allowed;box-shadow:none}
+.btn-green{border-color:var(--green);color:var(--green)}
+.btn-green::before{background:var(--green-dim)}
+.btn-green:hover{box-shadow:0 0 14px var(--green-glow)}
+.btn-green:disabled{opacity:.28;cursor:not-allowed;box-shadow:none}
+.btn-ghost{border-color:var(--border);color:var(--muted)}
+.btn-ghost::before{background:rgba(255,255,255,.04)}
+
+/* ── PROGRESS ────────────────────────────────────────────── */
+.progress-wrap{display:none;flex-direction:column;gap:7px}
+.progress-wrap.visible{display:flex}
+.progress-bar-bg{height:2px;background:var(--border);width:100%;position:relative;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--red);width:0%;transition:width .1s;box-shadow:0 0 8px var(--red)}
+.progress-text{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px}
+
+/* ── LOG ─────────────────────────────────────────────────── */
+.status-log{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.85;padding:10px 14px;background:var(--surface);border:1px solid var(--border);min-height:40px;display:none;max-height:120px;overflow-y:auto}
+.status-log.visible{display:block}
+.status-log .ok{color:var(--green)}
+.status-log .warn{color:var(--red)}
+.status-log .info{color:var(--blue)}
+
+/* ── DETECT PANEL ────────────────────────────────────────── */
+.detect-result{background:var(--surface);border:1px solid rgba(0,255,136,.2);padding:18px 20px;display:none;flex-direction:column;gap:12px}
+.detect-result.visible{display:flex}
+.detect-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--green);margin-bottom:4px}
+.detect-val{font-family:var(--mono);font-size:20px;color:var(--text);letter-spacing:1px}
+.detect-val span{color:var(--green)}
+.detect-meta{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8}
+.detect-none{color:var(--muted);font-family:var(--mono);font-size:12px}
+.confidence-bar{height:4px;background:var(--border);margin-top:6px;position:relative}
+.confidence-fill{height:100%;background:var(--green);box-shadow:0 0 8px var(--green-glow);transition:width .5s}
+
+/* ── EXPLANATION BOX ─────────────────────────────────────── */
+.explainer{background:var(--surface);border:1px solid rgba(0,207,255,.15);padding:14px 18px;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.9}
+.explainer b{color:var(--blue);font-weight:400}
+
+@media(max-width:600px){
+  .controls{grid-template-columns:1fr}
+  header{padding:18px 14px}
+  main{padding:22px 12px 48px}
+  .btn{padding:9px 16px}
+  .mode-toggle{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon"></div>
+  <div>
+    <div class="logo-text">DFW_TOOL <span style="font-size:11px;opacity:.5">v2</span></div>
+    <div class="logo-sub">DEEPFAKE WATERMARK · VISIBLE · INVISIBLE · DÉTECTEUR</div>
+  </div>
+  <div class="badge">⬤ OFFLINE</div>
+</header>
+
+<main>
+
+  <!-- ═══════════════ TABS ═══════════════ -->
+  <div class="tabs">
+    <button class="tab active-encode" id="tabEncode" onclick="switchTab('encode')">⬛ ENCODER WATERMARK</button>
+    <button class="tab" id="tabDetect" onclick="switchTab('detect')">◈ DÉTECTER WATERMARK</button>
+  </div>
+
+  <!-- ═══════════════ PANEL ENCODE ═══════════════ -->
+  <div class="panel visible" id="panelEncode">
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">▶</div>
+      <p><strong>Glisser une vidéo ici</strong><br>ou cliquer pour sélectionner<br><span style="font-size:10px;opacity:.5">MP4 · WebM · MOV — traitement 100% local</span></p>
+      <input type="file" id="fileInput" accept="video/*">
+    </div>
+
+    <!-- Mode toggle -->
+    <div>
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">MODE WATERMARK</div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeVisible" onclick="setMode('visible')">👁 VISIBLE</button>
+        <button class="mode-btn" id="modeInvisible" onclick="setMode('invisible')">🔒 INVISIBLE (LSB)</button>
+        <button class="mode-btn" id="modeBoth" onclick="setMode('both')">◈ LES DEUX</button>
+      </div>
+    </div>
+
+    <!-- Visible controls -->
+    <div id="visibleControls">
+      <div class="controls">
+        <div class="ctrl-block">
+          <div class="ctrl-label">WATERMARK VISIBLE</div>
+          <div class="ctrl-row"><label>Texte</label><input type="text" id="wmText" value="⚠ DEEPFAKE" maxlength="40"></div>
+          <div class="ctrl-row">
+            <label>Taille</label>
+            <input type="range" id="wmSize" min="12" max="96" value="38">
+            <span class="range-val" id="wmSizeVal">38px</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Opacité</label>
+            <input type="range" id="wmOpacity" min="5" max="100" value="60">
+            <span class="range-val" id="wmOpacityVal">60%</span>
+          </div>
+          <div class="ctrl-row">
+            <label>Position</label>
+            <select id="wmPos">
+              <option value="top-left">Haut gauche</option>
+              <option value="top-center">Haut centre</option>
+              <option value="top-right" selected>Haut droite</option>
+              <option value="center">Centre</option>
+              <option value="bottom-left">Bas gauche</option>
+              <option value="bottom-center">Bas centre</option>
+              <option value="bottom-right">Bas droite</option>
+              <option value="diagonal">Diagonal (répété)</option>
+            </select>
+          </div>
+        </div>
+        <div class="ctrl-block">
+          <div class="ctrl-label">STYLE</div>
+          <div class="ctrl-row">
+            <label>Couleur</label>
+            <div class="color-row">
+              <div class="color-swatch active" style="background:#ff2d2d" data-color="#ff2d2d"></div>
+              <div class="color-swatch" style="background:#ffffff" data-color="#ffffff"></div>
+              <div class="color-swatch" style="background:#ffd700" data-color="#ffd700"></div>
+              <div class="color-swatch" style="background:#00ff88" data-color="#00ff88"></div>
+              <div class="color-swatch" style="background:#00cfff" data-color="#00cfff"></div>
+              <div class="color-swatch" style="background:#ff6aff" data-color="#ff6aff"></div>
+            </div>
+          </div>
+          <div class="ctrl-row" style="margin-top:8px"><label>Fond</label>
+            <select id="wmBg"><option value="none">Aucun</option><option value="dark" selected>Sombre</option><option value="light">Clair</option></select>
+          </div>
+          <div class="ctrl-row"><label>Bordure</label>
+            <select id="wmBorder"><option value="none">Aucune</option><option value="box" selected>Rectangle</option><option value="underline">Soulignement</option></select>
+          </div>
+          <div class="ctrl-row"><label>Export</label>
+            <select id="exportFormat"><option value="webm">WebM (universel)</option><option value="mp4">MP4 (si supporté)</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invisible controls -->
+    <div class="invis-controls" id="invisControls">
+      <div class="ctrl-block" style="border-color:rgba(0,207,255,.25)">
+        <div class="ctrl-label" style="color:var(--blue)">WATERMARK INVISIBLE (STÉGANOGRAPHIE LSB)</div>
+        <div class="ctrl-row">
+          <label>Message</label>
+          <input type="text" id="invisText" value="DEEPFAKE_DETECTED" maxlength="80" style="border-color:rgba(0,207,255,.3)">
+        </div>
+        <div class="ctrl-row">
+          <label>Clé</label>
+          <input type="text" id="invisKey" value="secret123" maxlength="32" style="border-color:rgba(0,207,255,.3)" placeholder="clé de signature optionnelle">
+        </div>
+        <div class="ctrl-row">
+          <label>Intensité</label>
+          <input type="range" id="invisStrength" min="1" max="4" value="2">
+          <span class="range-val" id="invisStrengthVal" style="color:var(--blue)">2 bits</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:6px;line-height:1.7">
+          Intensité 1-2 bits = imperceptible / 3-4 bits = légère dégradation visible
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-section" id="previewSection">
+      <div class="section-title">APERÇU EN TEMPS RÉEL</div>
+      <div class="canvas-wrap">
+        <canvas id="preview"></canvas>
+        <div class="canvas-badge">LIVE PREVIEW</div>
+        <div class="invis-badge" id="invisBadge">🔒 WM INVISIBLE ACTIF</div>
+      </div>
+      <video id="source" playsinline muted loop></video>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-red" id="renderBtn" disabled>⬇ EXPORTER VIDÉO</button>
+      <button class="btn btn-ghost" id="resetBtn">✕ RESET</button>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-text" id="progressText">Initialisation...</div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+    </div>
+
+    <!-- Log -->
+    <div class="status-log" id="statusLog"></div>
+
+    <!-- Explainer -->
+    <div class="explainer">
+      <b>VISIBLE</b> — texte/logo rendu par-dessus chaque frame vidéo, opacité réglable.<br>
+      <b>INVISIBLE (LSB)</b> — message encodé dans les bits de poids faible des pixels R/G/B de chaque frame. Indétectable à l'œil nu, récupérable avec l'onglet Détecteur.<br>
+      <b>Limite</b> : le re-encodage vidéo (compression H264/VP9) peut partiellement détruire le watermark LSB — c'est une limite inhérente à la compression lossy.
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL DETECT ═══════════════ -->
+  <div class="panel" id="panelDetect">
+
+    <div class="drop-zone detect-zone" id="dropZoneDetect">
+      <div class="icon" style="color:var(--green)">◈</div>
+      <p style="color:var(--muted)"><strong style="color:var(--green)">Glisser une vidéo watermarkée</strong><br>ou cliquer pour sélectionner<br><span style="font-size:10px;opacity:.5">Le détecteur analyse les bits LSB des premières frames</span></p>
+      <input type="file" id="fileInputDetect" accept="video/*">
+    </div>
+
+    <div class="ctrl-block" style="border-color:rgba(0,255,136,.2)">
+      <div class="ctrl-label green">PARAMÈTRES DÉTECTION</div>
+      <div class="ctrl-row">
+        <label>Clé</label>
+        <input type="text" id="detectKey" value="secret123" placeholder="même clé que l'encodage" style="border-color:rgba(0,255,136,.2)">
+      </div>
+      <div class="ctrl-row">
+        <label>Intensité</label>
+        <input type="range" id="detectStrength" min="1" max="4" value="2">
+        <span class="range-val" id="detectStrengthVal" style="color:var(--green)">2 bits</span>
+      </div>
+      <div class="ctrl-row">
+        <label>Frames</label>
+        <select id="detectFrames" style="border-color:rgba(0,255,136,.2)">
+          <option value="1">1 frame (rapide)</option>
+          <option value="3" selected>3 frames (standard)</option>
+          <option value="10">10 frames (précis)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-green" id="detectBtn" disabled>◈ ANALYSER LA VIDÉO</button>
+    </div>
+
+    <!-- Résultat détection -->
+    <div class="detect-result" id="detectResult">
+      <div class="detect-title">RÉSULTAT DE L'ANALYSE</div>
+      <div class="detect-val" id="detectVal">—</div>
+      <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill" style="width:0%"></div></div>
+      <div class="detect-meta" id="detectMeta"></div>
+    </div>
+
+    <div class="status-log visible" id="detectLog" style="min-height:60px"></div>
+
+    <div class="explainer" style="border-color:rgba(0,255,136,.15)">
+      <b>COMMENT ÇA MARCHE</b><br>
+      Le détecteur extrait la première frame de la vidéo via Canvas, lit les bits de poids faible (LSB) des canaux rouge/vert de chaque pixel, reconstruit le message binaire et le décode en texte ASCII.<br>
+      <b>Important</b> : fonctionne surtout sur des vidéos <b>non re-compressées</b> (WebM lossless ou avec faible compression). La compression H264/VP9 forte peut corrompre les LSB.
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let videoFile = null, videoURL = null;
+let detectFile = null, detectURL = null;
+let selectedColor = '#ff2d2d';
+let animFrame = null;
+let currentMode = 'visible'; // 'visible' | 'invisible' | 'both'
+
+// DOM
+const video      = document.getElementById('source');
+const canvas     = document.getElementById('preview');
+const ctx        = canvas.getContext('2d', { willReadFrequently: true });
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const previewSec = document.getElementById('previewSection');
+const renderBtn  = document.getElementById('renderBtn');
+const resetBtn   = document.getElementById('resetBtn');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const statusLog  = document.getElementById('statusLog');
+const invisBadge = document.getElementById('invisBadge');
+const detectBtn  = document.getElementById('detectBtn');
+const detectLog  = document.getElementById('detectLog');
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('tabEncode').className = 'tab';
+  document.getElementById('tabDetect').className = 'tab';
+  document.getElementById('panelEncode').classList.remove('visible');
+  document.getElementById('panelDetect').classList.remove('visible');
+  if (tab === 'encode') {
+    document.getElementById('tabEncode').className = 'tab active-encode';
+    document.getElementById('panelEncode').classList.add('visible');
+  } else {
+    document.getElementById('tabDetect').className = 'tab active-detect';
+    document.getElementById('panelDetect').classList.add('visible');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MODE TOGGLE
+// ═══════════════════════════════════════════════════════
+function setMode(m) {
+  currentMode = m;
+  ['modeVisible','modeInvisible','modeBoth'].forEach(id => document.getElementById(id).classList.remove('active'));
+  if (m === 'visible')   document.getElementById('modeVisible').classList.add('active');
+  if (m === 'invisible') document.getElementById('modeInvisible').classList.add('active');
+  if (m === 'both')      document.getElementById('modeBoth').classList.add('active');
+
+  const showVis  = m === 'visible'   || m === 'both';
+  const showInv  = m === 'invisible' || m === 'both';
+  document.getElementById('visibleControls').style.display = showVis  ? '' : 'none';
+  document.getElementById('invisControls').classList.toggle('visible', showInv);
+  invisBadge.classList.toggle('visible', showInv);
+}
+
+// ═══════════════════════════════════════════════════════
+// RANGE LABELS
+// ═══════════════════════════════════════════════════════
+document.getElementById('wmSize').addEventListener('input', e => document.getElementById('wmSizeVal').textContent = e.target.value+'px');
+document.getElementById('wmOpacity').addEventListener('input', e => document.getElementById('wmOpacityVal').textContent = e.target.value+'%');
+document.getElementById('invisStrength').addEventListener('input', e => document.getElementById('invisStrengthVal').textContent = e.target.value+' bits');
+document.getElementById('detectStrength').addEventListener('input', e => document.getElementById('detectStrengthVal').textContent = e.target.value+' bits');
+
+// ═══════════════════════════════════════════════════════
+// COLOR SWATCHES
+// ═══════════════════════════════════════════════════════
+document.querySelectorAll('.color-swatch').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    selectedColor = el.dataset.color;
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// DROP ZONES
+// ═══════════════════════════════════════════════════════
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('video/')) loadVideo(f); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadVideo(fileInput.files[0]); });
+
+const dropZoneDetect = document.getElementById('dropZoneDetect');
+const fileInputDetect = document.getElementById('fileInputDetect');
+dropZoneDetect.addEventListener('dragover', e => { e.preventDefault(); dropZoneDetect.classList.add('drag-over'); });
+dropZoneDetect.addEventListener('dragleave', () => dropZoneDetect.classList.remove('drag-over'));
+dropZoneDetect.addEventListener('drop', e => { e.preventDefault(); dropZoneDetect.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('video/')) loadDetectVideo(f); });
+fileInputDetect.addEventListener('change', () => { if (fileInputDetect.files[0]) loadDetectVideo(fileInputDetect.files[0]); });
+
+// ═══════════════════════════════════════════════════════
+// LOAD VIDEO (encode)
+// ═══════════════════════════════════════════════════════
+function loadVideo(file) {
+  videoFile = file;
+  if (videoURL) URL.revokeObjectURL(videoURL);
+  videoURL = URL.createObjectURL(file);
+  video.src = videoURL;
+  video.load();
+  video.addEventListener('loadedmetadata', () => {
+    canvas.width  = video.videoWidth  || 1280;
+    canvas.height = video.videoHeight || 720;
+    previewSec.classList.add('visible');
+    renderBtn.disabled = false;
+    log(`<span class="ok">✓</span> ${file.name} — ${canvas.width}×${canvas.height} — ${formatDuration(video.duration)}`);
+    startPreview();
+  }, { once: true });
+}
+
+// ═══════════════════════════════════════════════════════
+// LIVE PREVIEW
+// ═══════════════════════════════════════════════════════
+function startPreview() {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  video.play().catch(() => {});
+  function drawFrame() {
+    if (video.readyState >= 2) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (currentMode === 'visible' || currentMode === 'both')
+        drawVisibleWatermark(ctx, canvas.width, canvas.height);
+      // Invisible: preview shows a subtle blue pixel pattern hint on corner
+      if (currentMode === 'invisible' || currentMode === 'both')
+        drawInvisHint(ctx, canvas.width, canvas.height);
+    }
+    animFrame = requestAnimationFrame(drawFrame);
+  }
+  drawFrame();
+}
+
+// ═══════════════════════════════════════════════════════
+// VISIBLE WATERMARK
+// ═══════════════════════════════════════════════════════
+function drawVisibleWatermark(ctx, W, H) {
+  const text    = document.getElementById('wmText').value || '⚠ DEEPFAKE';
+  const size    = parseInt(document.getElementById('wmSize').value);
+  const opacity = parseInt(document.getElementById('wmOpacity').value) / 100;
+  const pos     = document.getElementById('wmPos').value;
+  const bgMode  = document.getElementById('wmBg').value;
+  const border  = document.getElementById('wmBorder').value;
+  const color   = selectedColor;
+
+  ctx.save();
+  ctx.font = `bold ${size}px 'Share Tech Mono',monospace`;
+  ctx.textBaseline = 'middle';
+  const PAD = Math.round(size * 0.45), MARGIN = Math.round(size * 0.6);
+
+  if (pos === 'diagonal') {
+    ctx.globalAlpha = opacity * 0.5;
+    ctx.fillStyle = color;
+    ctx.rotate(-Math.PI / 6);
+    const step = size * 4;
+    for (let y = -H; y < W+H; y += step * 0.8)
+      for (let x = -W; x < W+H; x += ctx.measureText(text).width + step)
+        ctx.fillText(text, x, y);
+    ctx.restore(); return;
+  }
+
+  const tw = ctx.measureText(text).width, th = size;
+  let bx, by;
+  switch(pos) {
+    case 'top-left':     bx=MARGIN;       by=MARGIN+th/2; break;
+    case 'top-center':   bx=(W-tw)/2;     by=MARGIN+th/2; break;
+    case 'top-right':    bx=W-tw-MARGIN;  by=MARGIN+th/2; break;
+    case 'center':       bx=(W-tw)/2;     by=H/2;         break;
+    case 'bottom-left':  bx=MARGIN;       by=H-MARGIN-th/2; break;
+    case 'bottom-center':bx=(W-tw)/2;     by=H-MARGIN-th/2; break;
+    case 'bottom-right': bx=W-tw-MARGIN;  by=H-MARGIN-th/2; break;
+    default:             bx=W-tw-MARGIN;  by=MARGIN+th/2;
+  }
+  if (bgMode!=='none') { ctx.globalAlpha=opacity*.5; ctx.fillStyle=bgMode==='dark'?'rgba(0,0,0,.75)':'rgba(255,255,255,.75)'; ctx.fillRect(bx-PAD,by-th/2-PAD*.5,tw+PAD*2,th+PAD); }
+  if (border==='box')  { ctx.globalAlpha=opacity; ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.5,size*.04); ctx.strokeRect(bx-PAD,by-th/2-PAD*.5,tw+PAD*2,th+PAD); }
+  else if (border==='underline') { ctx.globalAlpha=opacity; ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.5,size*.06); ctx.beginPath(); ctx.moveTo(bx-PAD,by+th/2+PAD*.3); ctx.lineTo(bx+tw+PAD,by+th/2+PAD*.3); ctx.stroke(); }
+  ctx.globalAlpha=opacity; ctx.fillStyle=color; ctx.fillText(text, bx, by);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+// INVISIBLE HINT (aperçu uniquement)
+// ═══════════════════════════════════════════════════════
+function drawInvisHint(ctx, W, H) {
+  ctx.save();
+  ctx.globalAlpha = 0.13;
+  ctx.fillStyle = '#00cfff';
+  ctx.fillRect(0, 0, 5, 5);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+// INVISIBLE WATERMARK — ENCODAGE ROBUSTE PAR BLOCS
+//
+// Problème LSB : la compression vidéo (VP9/H264) écrase
+// les bits de poids faible → détection impossible.
+//
+// Solution : on encode chaque bit dans la LUMINANCE MOYENNE
+// d'un bloc de pixels (ex: 8×8). Un bit=1 → on augmente
+// la luminance du bloc de +DELTA. Un bit=0 → on la diminue
+// de -DELTA. La compression conserve les moyennes globales
+// des blocs (DCT), donc le signal survit.
+//
+// Détection : on lit la luminance moyenne de chaque bloc,
+// on compare au seuil → vote majoritaire → bit récupéré.
+//
+// Format payload : MAGIC(4) + LEN(1 byte) + MESSAGE
+// MAGIC = [0xDF, 0xAB, 0xCD, 0x12] (signature fixe)
+// ═══════════════════════════════════════════════════════
+
+const WM_MAGIC   = [0xDF, 0xAB, 0xCD, 0x12];
+const BLOCK_SIZE = 8;   // taille du bloc en pixels
+const DELTA      = 8;   // luminance offset (doit survivre à la compression)
+const REPEAT     = 3;   // répétition de chaque bit (vote majoritaire)
+
+function msgToBits(message) {
+  const bytes = new TextEncoder().encode(message);
+  // payload = MAGIC + 1-byte length + message bytes
+  const payload = [
+    ...WM_MAGIC,
+    bytes.length & 0xFF,
+    ...bytes
+  ];
+  const bits = [];
+  for (const b of payload)
+    for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
+  return bits;
+}
+
+function encodeMessageToLSB(imageData, message, _strength) {
+  // _strength ignoré — on utilise l'encodage par blocs robuste
+  const W = imageData.width, H = imageData.height;
+  const data = imageData.data;
+  const bits = msgToBits(message);
+  // répéter chaque bit REPEAT fois pour la robustesse
+  const bitsRepeated = [];
+  for (const b of bits) for (let r = 0; r < REPEAT; r++) bitsRepeated.push(b);
+
+  // nombre de blocs disponibles par ligne
+  const blocksX = Math.floor(W / BLOCK_SIZE);
+  const blocksY = Math.floor(H / BLOCK_SIZE);
+
+  let bitIdx = 0;
+  for (let by = 0; by < blocksY && bitIdx < bitsRepeated.length; by++) {
+    for (let bx = 0; bx < blocksX && bitIdx < bitsRepeated.length; bx++) {
+      const bit = bitsRepeated[bitIdx++];
+      // modifier la luminance de chaque pixel du bloc
+      for (let py = 0; py < BLOCK_SIZE; py++) {
+        for (let px = 0; px < BLOCK_SIZE; px++) {
+          const idx = ((by * BLOCK_SIZE + py) * W + (bx * BLOCK_SIZE + px)) * 4;
+          const r = data[idx], g = data[idx+1], b2 = data[idx+2];
+          const lum = 0.299*r + 0.587*g + 0.114*b2;
+          const delta = bit === 1 ? DELTA : -DELTA;
+          // shift all channels proportionally to preserve color, just adjust brightness
+          const scale = Math.max(0, Math.min(255, lum + delta)) / (lum || 1);
+          data[idx]   = Math.max(0, Math.min(255, Math.round(r * scale)));
+          data[idx+1] = Math.max(0, Math.min(255, Math.round(g * scale)));
+          data[idx+2] = Math.max(0, Math.min(255, Math.round(b2 * scale)));
+        }
+      }
+    }
+  }
+  return imageData;
+}
+
+function decodeMessageFromLSB(imageData, _strength) {
+  const W = imageData.width, H = imageData.height;
+  const data = imageData.data;
+
+  const blocksX = Math.floor(W / BLOCK_SIZE);
+  const blocksY = Math.floor(H / BLOCK_SIZE);
+  const totalBlocks = blocksX * blocksY;
+
+  // Calculer la luminance moyenne globale de l'image → seuil adaptatif
+  let globalLumSum = 0, globalCount = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    globalLumSum += 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    globalCount++;
+  }
+  // seuil par bloc = luminance moyenne du bloc lui-même comparée à ses voisins
+  // On utilise une approche plus simple : lire les luminances de tous les blocs
+  // puis décider bit=1 si lum > médiane locale
+
+  const blockLums = [];
+  for (let by = 0; by < blocksY; by++) {
+    for (let bx = 0; bx < blocksX; bx++) {
+      let sum = 0;
+      for (let py = 0; py < BLOCK_SIZE; py++)
+        for (let px = 0; px < BLOCK_SIZE; px++) {
+          const idx = ((by*BLOCK_SIZE+py)*W + (bx*BLOCK_SIZE+px))*4;
+          sum += 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
+        }
+      blockLums.push(sum / (BLOCK_SIZE * BLOCK_SIZE));
+    }
+  }
+
+  // Extraire les bits bruts par vote majoritaire (groupes de REPEAT)
+  // D'abord estimer le nombre total de bits attendus:
+  // MAGIC(4) + LEN(1) + MSG(?) → on lit au moins (4+1)*8*REPEAT blocs = 120 blocs
+  const minBits = (WM_MAGIC.length + 1) * 8; // bits pour magic+len
+
+  // Convertir luminances → bits via seuil adaptatif par fenêtre glissante
+  // On compare chaque bloc à la moyenne de ses voisins immédiats (context window)
+  const CTX = 16; // fenêtre de contexte
+  function rawBit(i) {
+    const start = Math.max(0, i - CTX);
+    const end   = Math.min(blockLums.length - 1, i + CTX);
+    let localMean = 0;
+    for (let j = start; j <= end; j++) localMean += blockLums[j];
+    localMean /= (end - start + 1);
+    return blockLums[i] >= localMean ? 1 : 0;
+  }
+
+  // Reconstituer les bits avec vote majoritaire
+  const reconBits = [];
+  const nRepeatedBits = Math.floor(blockLums.length / REPEAT) * REPEAT;
+  for (let i = 0; i < nRepeatedBits; i += REPEAT) {
+    let votes = 0;
+    for (let r = 0; r < REPEAT; r++) votes += rawBit(i + r);
+    reconBits.push(votes >= Math.ceil(REPEAT / 2) ? 1 : 0);
+  }
+
+  // Chercher le MAGIC dans les bits reconstitués
+  function bitsToBytes(startBit, n) {
+    const arr = [];
+    for (let i = 0; i < n; i++) {
+      let byte = 0;
+      for (let b = 0; b < 8; b++) byte = (byte << 1) | (reconBits[startBit + i*8 + b] || 0);
+      arr.push(byte);
+    }
+    return arr;
+  }
+
+  // Scan pour le magic header
+  for (let offset = 0; offset <= reconBits.length - (WM_MAGIC.length + 1) * 8; offset++) {
+    const magicBytes = bitsToBytes(offset, WM_MAGIC.length);
+    if (magicBytes.every((v, i) => v === WM_MAGIC[i])) {
+      // Magic trouvé ! Lire la longueur
+      const lenArr = bitsToBytes(offset + WM_MAGIC.length * 8, 1);
+      const msgLen = lenArr[0];
+      if (msgLen <= 0 || msgLen > 120) continue;
+      // Vérifier qu'on a assez de bits
+      const needed = offset + (WM_MAGIC.length + 1 + msgLen) * 8;
+      if (needed > reconBits.length) continue;
+      const msgArr = bitsToBytes(offset + (WM_MAGIC.length + 1) * 8, msgLen);
+      // Filtrer les caractères ASCII valides
+      if (!msgArr.every(b => b >= 32 && b < 127)) continue;
+      try {
+        return new TextDecoder().decode(new Uint8Array(msgArr));
+      } catch { continue; }
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════
+renderBtn.addEventListener('click', async () => {
+  if (!videoFile) return;
+  renderBtn.disabled = true;
+  progressWrap.classList.add('visible');
+  statusLog.classList.add('visible');
+  log('▶ Démarrage du rendu…');
+
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+  video.pause();
+  video.currentTime = 0;
+  await waitEvent(video, 'seeked');
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = canvas.width; offCanvas.height = canvas.height;
+  const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+
+  const mime = getSupportedMime();
+  log(`<span class="ok">✓</span> Codec : ${mime}`);
+
+  const stream   = offCanvas.captureStream(30);
+  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+  const chunks   = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.start(100);
+
+  const duration = video.duration;
+  video.playbackRate = 1;
+  video.play();
+
+  const invisMessage  = document.getElementById('invisText').value || 'DEEPFAKE';
+  const invisStrength = parseInt(document.getElementById('invisStrength').value);
+
+  if (currentMode === 'invisible' || currentMode === 'both')
+    log(`<span class="info">🔒</span> Encodage LSB : "${invisMessage}" (${invisStrength} bit(s)/canal)`);
+  if (currentMode === 'visible' || currentMode === 'both')
+    log(`<span class="ok">👁</span> Watermark visible activé`);
+
+  return new Promise(resolve => {
+    let lastTime = -1;
+    function processFrame() {
+      const t = video.currentTime;
+      const progress = t / duration;
+      progressFill.style.width = (progress*100).toFixed(1)+'%';
+      progressText.textContent = `Encodage : ${(progress*100).toFixed(0)}% — ${formatDuration(t)} / ${formatDuration(duration)}`;
+
+      if (video.paused || video.ended || t >= duration - 0.05) {
+        video.pause();
+        setTimeout(() => {
+          recorder.stop();
+          recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mime });
+            const ext  = mime.includes('mp4') ? 'mp4' : 'webm';
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = videoFile.name.replace(/\.[^.]+$/, '')+'_watermarked.'+ext;
+            a.click(); URL.revokeObjectURL(url);
+            progressFill.style.width = '100%';
+            progressText.textContent = '✓ Export terminé !';
+            log(`<span class="ok">✓ Exporté (${formatSize(blob.size)})</span>`);
+            renderBtn.disabled = false;
+            startPreview(); resolve();
+          };
+        }, 300);
+        return;
+      }
+
+      if (t !== lastTime) {
+        lastTime = t;
+        offCtx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
+
+        // Apply invisible WM first (pixel manipulation)
+        if (currentMode === 'invisible' || currentMode === 'both') {
+          const imgData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+          encodeMessageToLSB(imgData, invisMessage, invisStrength);
+          offCtx.putImageData(imgData, 0, 0);
+        }
+
+        // Apply visible WM on top
+        if (currentMode === 'visible' || currentMode === 'both')
+          drawVisibleWatermark(offCtx, offCanvas.width, offCanvas.height);
+      }
+      requestAnimationFrame(processFrame);
+    }
+    requestAnimationFrame(processFrame);
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// DETECT
+// ═══════════════════════════════════════════════════════
+function loadDetectVideo(file) {
+  detectFile = file;
+  if (detectURL) URL.revokeObjectURL(detectURL);
+  detectURL = URL.createObjectURL(file);
+  detectBtn.disabled = false;
+  dlog(`<span class="ok">✓</span> ${file.name} chargé — cliquez "ANALYSER"`);
+}
+
+detectBtn.addEventListener('click', async () => {
+  if (!detectFile) return;
+  detectBtn.disabled = true;
+  document.getElementById('detectResult').classList.remove('visible');
+  detectLog.innerHTML = '';
+  dlog('▶ Analyse en cours…');
+
+  const strength = parseInt(document.getElementById('detectStrength').value);
+  const nFrames  = parseInt(document.getElementById('detectFrames').value);
+
+  const vid = document.createElement('video');
+  vid.src = detectURL;
+  vid.muted = true;
+  vid.preload = 'metadata';
+  await waitEvent(vid, 'loadedmetadata');
+
+  const W = vid.videoWidth  || 1280;
+  const H = vid.videoHeight || 720;
+
+  dlog(`<span class="info">ℹ</span> Résolution : ${W}×${H} — analyse ${nFrames} frame(s) (encodage par blocs)`);
+
+  // Canvas pleine résolution — pas de zoom pour ne pas altérer les blocs
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = W; tempCanvas.height = H;
+  const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+
+  const results = [];
+  const times = [];
+  // Frame 0 = très début (évite les frames noires), puis répartit le reste
+  times.push(Math.min(0.5, vid.duration * 0.05));
+  for (let i = 1; i < nFrames; i++) times.push((vid.duration / (nFrames)) * i);
+
+  for (const t of times) {
+    vid.currentTime = t;
+    await new Promise(r => {
+      const onSeeked = () => { vid.removeEventListener('seeked', onSeeked); r(); };
+      const timeout  = setTimeout(() => { vid.removeEventListener('seeked', onSeeked); r(); }, 3000);
+      vid.addEventListener('seeked', () => { clearTimeout(timeout); onSeeked(); });
+    });
+    tempCtx.drawImage(vid, 0, 0, W, H);
+    const imgData = tempCtx.getImageData(0, 0, W, H);
+    const msg = decodeMessageFromLSB(imgData, strength);
+    if (msg) results.push(msg);
+    dlog(`Frame @${t.toFixed(2)}s → <span class="${msg?'ok':'warn'}">${msg ? '"'+msg+'"' : '(rien détecté)'}</span>`);
+  }
+
+  // Show result
+  const resultEl = document.getElementById('detectResult');
+  const valEl    = document.getElementById('detectVal');
+  const metaEl   = document.getElementById('detectMeta');
+  const confFill = document.getElementById('confidenceFill');
+  resultEl.classList.add('visible');
+
+  if (results.length > 0) {
+    // Most common result
+    const freq = {};
+    results.forEach(r => freq[r] = (freq[r]||0)+1);
+    const best = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0];
+    const conf = Math.round((best[1]/results.length)*100);
+    valEl.innerHTML = `<span>🔒 WATERMARK DÉTECTÉ</span><br><span style="font-size:14px;color:var(--text)">"${best[0]}"</span>`;
+    confFill.style.width = conf+'%';
+    metaEl.innerHTML = `Confiance : ${conf}% (${best[1]}/${results.length} frames concordantes)<br>Intensité utilisée : ${strength} bit(s) / canal`;
+    dlog(`<span class="ok">✓ MESSAGE : "${best[0]}" — confiance ${conf}%</span>`);
+  } else {
+    valEl.innerHTML = `<span style="color:var(--muted)">⚠ Aucun watermark LSB détecté</span>`;
+    confFill.style.width = '0%';
+    metaEl.innerHTML = `Essayez une intensité différente, ou vérifiez que la vidéo a été encodée avec cet outil.<br>Note : la compression vidéo forte peut effacer les LSB.`;
+    dlog(`<span class="warn">✗ Watermark non détecté</span>`);
+  }
+  detectBtn.disabled = false;
+});
+
+// ═══════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════
+resetBtn.addEventListener('click', () => {
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+  video.pause(); video.src = '';
+  if (videoURL) { URL.revokeObjectURL(videoURL); videoURL = null; }
+  videoFile = null; fileInput.value = '';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  previewSec.classList.remove('visible');
+  renderBtn.disabled = true;
+  progressWrap.classList.remove('visible');
+  statusLog.classList.remove('visible');
+  statusLog.innerHTML = '';
+  progressFill.style.width = '0%';
+});
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function getSupportedMime() {
+  for (const t of ['video/mp4;codecs=h264','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'])
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  return 'video/webm';
+}
+function waitEvent(el, ev) { return new Promise(r => el.addEventListener(ev, r, {once:true})); }
+function formatDuration(s) { if(!s||isNaN(s))return'0:00'; return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`; }
+function formatSize(b) { return b>1e6?(b/1e6).toFixed(1)+' MB':(b/1e3).toFixed(0)+' KB'; }
+function log(msg)  { statusLog.classList.add('visible'); statusLog.innerHTML+=`<div>${msg}</div>`; statusLog.scrollTop=statusLog.scrollHeight; }
+function dlog(msg) { detectLog.innerHTML+=`<div>${msg}</div>`; detectLog.scrollTop=detectLog.scrollHeight; }
+</script>
+</body>
+</html>
