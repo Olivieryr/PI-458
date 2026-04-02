@@ -17,8 +17,8 @@ Simulateur CLI de sensibilisation à l'ingénierie sociale. Un agent LLM joue le
 
 ```bash
 # 1. Cloner le dépôt
-git clone <url-du-repo>
-cd social-engineering-simulator
+git clone https://github.com/Olivieryr/PI-458.git
+cd Voicecloning
 
 # 2. Créer un environnement virtuel
 python -m venv .venv
